@@ -17,7 +17,7 @@ s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY, aws_secret_access_key=SECR
 
 def list_files(bucket_name, prefix):
     try:
-        response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        response = s3.list_objects_v2(Bucket=bucket_name, Prefix="y-wing/")
         if 'Contents' in response:
             for obj in response['Contents']:
                 print(obj['Key'])
@@ -47,12 +47,29 @@ def list_files_with_regex(bucket_name, prefix, pattern):
     except ClientError as e:
         print(f"Error: {e}")
 
+def delete_files_with_regex(bucket_name, prefix, pattern):
+    """Delete files that match a regex pattern"""
+    try:
+        response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        if 'Contents' in response:
+            to_delete = [{'Key': obj['Key']} for obj in response['Contents'] if re.search(pattern, obj['Key'])]
+            if to_delete:
+                delete_response = s3.delete_objects(Bucket=bucket_name, Delete={'Objects': to_delete})
+                print(f"Deleted files: {delete_response.get('Deleted', [])}")
+            else:
+                print("No files matched the pattern.")
+        else:
+            print("No files found.")
+    except ClientError as e:
+        print(f"Error: {e}")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="S3 CLI using boto3")
-    parser.add_argument('action', choices=['list', 'upload', 'list_regex'], help='Action to perform')
+    parser.add_argument('action', choices=['list', 'upload', 'list_regex', 'delete_regex'], help='Action to perform')
     parser.add_argument('--file', help='File to upload')
     parser.add_argument('--object', help='S3 object key for upload')
-    parser.add_argument('--pattern', help='Regex pattern to filter files')
+    parser.add_argument('--pattern', help='Regex pattern to filter or delete files')
 
     args = parser.parse_args()
 
@@ -68,3 +85,8 @@ if __name__ == '__main__':
             list_files_with_regex(bucket_name, prefix, args.pattern)
         else:
             print("Please provide --pattern for listing files with regex.")
+    elif args.action == 'delete_regex':
+        if args.pattern:
+            delete_files_with_regex(bucket_name, prefix, args.pattern)
+        else:
+            print("Please provide --pattern for deleting files with regex.")
