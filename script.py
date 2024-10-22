@@ -26,7 +26,27 @@ def list_files(bucket_name, prefix):
     except ClientError as e:
         print(f"Error: {e}")
 
+def upload_file(file_name, bucket_name, object_name):
+    try:
+        s3.upload_file(file_name, bucket_name, object_name)
+        print(f"File {file_name} uploaded successfully to {object_name}.")
+    except FileNotFoundError:
+        print(f"The file {file_name} was not found.")
+    except NoCredentialsError:
+        print("Credentials not available.")
+
 if __name__ == '__main__':
-    print(f"Listing files in bucket {bucket_name} with prefix {prefix}")
-    print(f"")
-    list_files(bucket_name, "y_wing/")
+    parser = argparse.ArgumentParser(description='List files in the bucket or upload a file to the bucket')
+    parser.add_argument('operation', type=str, help='list or upload')
+    parser.add_argument('--file_name', type=str, help='Name of the file to upload')
+    args = parser.parse_args()
+    if args.operation == 'list':
+        list_files(bucket_name, prefix)
+    elif args.operation == 'upload':
+        if args.file_name:
+            object_name = prefix + os.path.basename(args.file_name)
+            upload_file(args.file_name, bucket_name, object_name)
+        else:
+            print("Please provide the name of the file to upload.")
+    else:
+        print("Invalid operation. Please use 'list' or 'upload'.")
